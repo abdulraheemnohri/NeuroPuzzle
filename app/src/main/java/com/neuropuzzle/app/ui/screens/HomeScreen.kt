@@ -6,9 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.neuropuzzle.app.data.models.PlayerProfile
 
 @Composable
 fun HomeScreen(
+    profile: PlayerProfile,
     onStartGame: () -> Unit,
     onViewAnalysis: () -> Unit,
     onStartExperiment: () -> Unit,
@@ -22,7 +24,18 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "NeuroPuzzle", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(32.dp))
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "Level ${profile.currentLevel}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.secondary)
+
+        val xpProgress = profile.experiencePoints.toFloat() / (profile.currentLevel * 100).toFloat()
+        LinearProgressIndicator(
+            progress = xpProgress,
+            modifier = Modifier.fillMaxWidth(0.6f).padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.secondary
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(onClick = onStartGame, modifier = Modifier.fillMaxWidth(0.8f)) {
             Text("Adaptive Mode")

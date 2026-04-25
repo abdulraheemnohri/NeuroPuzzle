@@ -37,10 +37,21 @@ class GameManager(
         val strategy = analyzer.analyze(moves)
         val currentProfile = _playerProfile.value
 
-        // Update profile
+        // Update stats
         currentProfile.strategyType = strategy
         currentProfile.avgSolveTime = (currentProfile.avgSolveTime + solveTime) / 2f
         currentProfile.mistakeRate = (currentProfile.mistakeRate + (mistakes.toFloat() / moves.size.coerceAtLeast(1))) / 2f
+
+        // XP and Leveling
+        val xpGained = calculateXP(solveTime, mistakes)
+        currentProfile.experiencePoints += xpGained
+
+        val xpNeeded = currentProfile.currentLevel * 100
+        if (currentProfile.experiencePoints >= xpNeeded) {
+            currentProfile.currentLevel += 1
+            currentProfile.experiencePoints -= xpNeeded
+            currentProfile.skillLevel += 1 // Influence difficulty
+        }
 
         // Save to DB
         dao.savePlayerProfile(currentProfile)
@@ -52,6 +63,14 @@ class GameManager(
         }
 
         _playerProfile.value = currentProfile
+    }
+
+    private fun calculateXP(solveTime: Long, mistakes: Int): Int {
+        // Base XP: 50
+        // Speed bonus: up to 50
+        // Mistake penalty: -10 per mistake
+        val speedBonus = (30000 - solveTime).coerceAtLeast(0) / 600
+        return (50 + speedBonus.toInt() - (mistakes * 10)).coerceAtLeast(10)
     }
 
     fun getCurrentDNA(): PuzzleDNA? = currentDNA
