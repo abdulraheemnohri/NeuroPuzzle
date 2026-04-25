@@ -7,15 +7,16 @@ import kotlin.random.Random
 
 class PuzzleGenerator {
     fun generatePuzzle(dna: PuzzleDNA): Puzzle {
-        val size = dna.complexity + 4
+        val size = if (dna.rules.contains("chaos")) dna.complexity + Random.nextInt(5) + 4 else dna.complexity + 4
         val solutionPath = generatePath(size)
-        val traps = generateTraps(size, dna.deceptionLevel, solutionPath)
+        val branches = generateBranches(size, dna.branchingFactor, solutionPath)
+        val traps = generateTraps(size, dna.deceptionLevel, solutionPath + branches)
 
         return Puzzle(
             id = UUID.randomUUID().toString(),
             gridSize = size,
             solutionPath = solutionPath,
-            traps = traps,
+            traps = traps + branches, // Dead ends act like traps or just diversions
             rules = dna.rules
         )
     }
@@ -39,17 +40,41 @@ class PuzzleGenerator {
         return path
     }
 
-    private fun generateTraps(size: Int, deception: Int, path: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
+    private fun generateBranches(size: Int, branchingFactor: Int, mainPath: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
+        val branches = mutableListOf<Pair<Int, Int>>()
+        val pathSet = mainPath.toSet()
+
+        repeat(branchingFactor * 2) {
+            val startNode = mainPath.random()
+            var curr = startNode
+            repeat(3) { // Small dead-end branches
+                val neighbors = listOf(
+                    Pair(curr.first + 1, curr.second),
+                    Pair(curr.first - 1, curr.second),
+                    Pair(curr.first, curr.second + 1),
+                    Pair(curr.first, curr.second - 1)
+                ).filter { it.first in 0 until size && it.second in 0 until size && it !in pathSet && it !in branches }
+
+                if (neighbors.isNotEmpty()) {
+                    curr = neighbors.random()
+                    branches.add(curr)
+                }
+            }
+        }
+        return branches
+    }
+
+    private fun generateTraps(size: Int, deception: Int, occupied: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
         val traps = mutableListOf<Pair<Int, Int>>()
         val trapCount = deception * 2
-        val pathSet = path.toSet()
+        val occupiedSet = occupied.toSet()
 
         var count = 0
         while (count < trapCount) {
             val x = Random.nextInt(size)
             val y = Random.nextInt(size)
             val pos = Pair(x, y)
-            if (pos !in pathSet && pos !in traps) {
+            if (pos !in occupiedSet && pos !in traps) {
                 traps.add(pos)
                 count++
             }
