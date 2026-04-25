@@ -20,6 +20,8 @@ fun PuzzleGrid(
     currentPath: List<Pair<Int, Int>>,
     onCellClick: (Int, Int) -> Unit
 ) {
+    val isChaos = puzzle.rules.contains("chaos")
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val size = puzzle.gridSize
         LazyVerticalGrid(
@@ -30,7 +32,6 @@ fun PuzzleGrid(
                 val x = index % size
                 val y = index / size
                 val pos = Pair(x, y)
-                val isTrap = puzzle.traps.contains(pos)
                 val isPath = currentPath.contains(pos)
                 val isGoal = x == size - 1 && y == size - 1
 
@@ -41,15 +42,15 @@ fun PuzzleGrid(
                         .background(
                             when {
                                 isGoal -> Color.Green
-                                isPath -> Color.Blue
-                                // isTrap -> Color.Red // Maybe hide traps in some modes
-                                else -> Color.LightGray
+                                isPath -> MaterialTheme.colorScheme.primary
+                                isChaos && (x + y) % 5 == 0 -> MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
+                                else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         )
                         .clickable { onCellClick(x, y) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isGoal) Text("G")
+                    if (isGoal) Text("G", color = Color.Black)
                 }
             }
         }
