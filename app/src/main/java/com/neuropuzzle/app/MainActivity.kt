@@ -67,7 +67,9 @@ class MainActivity : ComponentActivity() {
                                 val chaosDna = PuzzleDNA(8, 8, 5, true, mutableListOf("chaos", "no_backtrack"))
                                 currentPuzzle = gameManager.startNewGame(chaosDna)
                                 currentScreen = "game"
-                            }
+                            },
+                            onViewProfile = { currentScreen = "profile" },
+                            onViewSettings = { currentScreen = "settings" }
                         )
                         "experiment" -> ExperimentScreen(
                             onStartWithDNA = { dna ->
@@ -75,6 +77,8 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = "game"
                             }
                         )
+                        "profile" -> ProfileScreen(profile = playerProfile, onBack = { currentScreen = "home" })
+                        "settings" -> SettingsScreen(onBack = { currentScreen = "home" })
                         "game" -> GameScreen(
                             puzzle = currentPuzzle,
                             onGameFinished = { path ->
@@ -102,7 +106,8 @@ class MainActivity : ComponentActivity() {
                             AnalysisScreen(
                                 strategy = playerProfile.strategyType,
                                 avgTime = playerProfile.avgSolveTime / 1000f,
-                                mistakeRate = playerProfile.mistakeRate
+                                mistakeRate = playerProfile.mistakeRate,
+                                onBack = { currentScreen = "home" }
                             )
                         }
                     }
