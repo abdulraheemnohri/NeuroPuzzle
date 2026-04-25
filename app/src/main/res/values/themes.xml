@@ -1,0 +1,4 @@
+<resources>
+    <style name="Theme.NeuroPuzzle" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.NeuroPuzzle.NoActionBar" parent="Theme.NeuroPuzzle" />
+</resources>

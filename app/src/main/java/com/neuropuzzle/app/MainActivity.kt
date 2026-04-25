@@ -8,6 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import androidx.room.Room
+import com.neuropuzzle.app.data.storage.LocalDB
 import com.neuropuzzle.app.engine.analyzer.PlayerAnalyzer
 import com.neuropuzzle.app.engine.core.GameManager
 import com.neuropuzzle.app.engine.generator.PuzzleFactory
@@ -17,22 +20,38 @@ import com.neuropuzzle.app.ui.screens.AnalysisScreen
 import com.neuropuzzle.app.ui.screens.GameScreen
 import com.neuropuzzle.app.ui.screens.HomeScreen
 import com.neuropuzzle.app.ui.screens.ResultScreen
+import com.neuropuzzle.app.ui.theme.NeuroPuzzleTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private lateinit var db: LocalDB
+    private lateinit var gameManager: GameManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val gameManager = GameManager(
+        db = Room.databaseBuilder(
+            applicationContext,
+            LocalDB::class.java, "neuropuzzle-db"
+        ).build()
+
+        gameManager = GameManager(
             generator = PuzzleGenerator(),
             analyzer = PlayerAnalyzer(),
-            mutationEngine = MutationEngine()
+            mutationEngine = MutationEngine(),
+            dao = db.puzzleDao()
         )
+
+        lifecycleScope.launch {
+            gameManager.loadProfile()
+        }
 
         setContent {
             var currentScreen by remember { mutableStateOf("home") }
             var currentPuzzle by remember { mutableStateOf(gameManager.startNewGame(PuzzleFactory.createDefaultDNA())) }
+            val playerProfile by gameManager.playerProfile.collectAsState()
 
-            MaterialTheme {
+            NeuroPuzzleTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
                         "home" -> HomeScreen(
@@ -42,8 +61,15 @@ class MainActivity : ComponentActivity() {
                         "game" -> GameScreen(
                             puzzle = currentPuzzle,
                             onGameFinished = { path ->
-                                gameManager.onGameFinished(path.map { "${it.first},${it.second}" }, 45000, 2)
-                                currentScreen = "result"
+                                lifecycleScope.launch {
+                                    gameManager.onGameFinished(
+                                        puzzleId = currentPuzzle.id,
+                                        moves = path.map { "${it.first},${it.second}" },
+                                        solveTime = 45000,
+                                        mistakes = 2
+                                    )
+                                    currentScreen = "result"
+                                }
                             }
                         )
                         "result" -> ResultScreen(
@@ -55,11 +81,10 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         "analysis" -> {
-                            val profile = gameManager.getPlayerProfile()
                             AnalysisScreen(
-                                strategy = profile.strategyType,
-                                avgTime = profile.avgSolveTime / 1000f,
-                                mistakeRate = profile.mistakeRate
+                                strategy = playerProfile.strategyType,
+                                avgTime = playerProfile.avgSolveTime / 1000f,
+                                mistakeRate = playerProfile.mistakeRate
                             )
                         }
                     }
