@@ -6,9 +6,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.neuropuzzle.app.ui.theme.PuzzleTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(
+    currentTheme: PuzzleTheme,
+    onThemeChange: (PuzzleTheme) -> Unit,
+    onBack: () -> Unit
+) {
     var soundEnabled by remember { mutableStateOf(true) }
     var vibrationEnabled by remember { mutableStateOf(true) }
     var mutationIntensity by remember { mutableFloatStateOf(0.5f) }
@@ -19,6 +25,20 @@ fun SettingsScreen(onBack: () -> Unit) {
         }
         Text("Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(32.dp))
+
+        Text("Theme Select", style = MaterialTheme.typography.titleMedium)
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            PuzzleTheme.values().forEach { theme ->
+                FilterChip(
+                    selected = currentTheme == theme,
+                    onClick = { onThemeChange(theme) },
+                    label = { Text(theme.name) },
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),

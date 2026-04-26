@@ -13,6 +13,7 @@ import androidx.room.Room
 import com.neuropuzzle.app.audio.SoundManager
 import com.neuropuzzle.app.data.models.PuzzleDNA
 import com.neuropuzzle.app.data.storage.LocalDB
+import com.neuropuzzle.app.data.storage.Preferences
 import com.neuropuzzle.app.engine.analyzer.PlayerAnalyzer
 import com.neuropuzzle.app.engine.core.GameManager
 import com.neuropuzzle.app.engine.generator.PuzzleFactory
@@ -20,12 +21,14 @@ import com.neuropuzzle.app.engine.generator.PuzzleGenerator
 import com.neuropuzzle.app.engine.mutation.MutationEngine
 import com.neuropuzzle.app.ui.screens.*
 import com.neuropuzzle.app.ui.theme.NeuroPuzzleTheme
+import com.neuropuzzle.app.ui.theme.PuzzleTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var db: LocalDB
     private lateinit var gameManager: GameManager
     private lateinit var soundManager: SoundManager
+    private lateinit var preferences: Preferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +46,7 @@ class MainActivity : ComponentActivity() {
         )
 
         soundManager = SoundManager(this)
+        preferences = Preferences(this)
 
         lifecycleScope.launch {
             gameManager.loadProfile()
@@ -51,12 +55,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by remember { mutableStateOf("home") }
             var currentPuzzle by remember { mutableStateOf(gameManager.startNewGame(PuzzleFactory.createDefaultDNA())) }
+            var currentTheme by remember { mutableStateOf(preferences.getTheme()) }
             val playerProfile by gameManager.playerProfile.collectAsState()
 
             var lastMistakes by remember { mutableIntStateOf(0) }
             var lastTimeText by remember { mutableStateOf("00:00") }
 
-            NeuroPuzzleTheme {
+            NeuroPuzzleTheme(puzzleTheme = currentTheme) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
                         "home" -> HomeScreen(
@@ -82,7 +87,14 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         "profile" -> ProfileScreen(profile = playerProfile, onBack = { currentScreen = "home" })
-                        "settings" -> SettingsScreen(onBack = { currentScreen = "home" })
+                        "settings" -> SettingsScreen(
+                            currentTheme = currentTheme,
+                            onThemeChange = {
+                                currentTheme = it
+                                preferences.setTheme(it)
+                            },
+                            onBack = { currentScreen = "home" }
+                        )
                         "game" -> GameScreen(
                             puzzle = currentPuzzle,
                             playerLevel = playerProfile.currentLevel,
@@ -120,9 +132,7 @@ class MainActivity : ComponentActivity() {
                         )
                         "analysis" -> {
                             AnalysisScreen(
-                                strategy = playerProfile.strategyType,
-                                avgTime = playerProfile.avgSolveTime / 1000f,
-                                mistakeRate = playerProfile.mistakeRate,
+                                profile = playerProfile,
                                 onBack = { currentScreen = "home" }
                             )
                         }
