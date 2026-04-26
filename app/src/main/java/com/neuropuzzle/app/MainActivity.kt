@@ -53,10 +53,14 @@ class MainActivity : ComponentActivity() {
             var currentPuzzle by remember { mutableStateOf(gameManager.startNewGame(PuzzleFactory.createDefaultDNA())) }
             val playerProfile by gameManager.playerProfile.collectAsState()
 
+            var lastMistakes by remember { mutableIntStateOf(0) }
+            var lastTimeText by remember { mutableStateOf("00:00") }
+
             NeuroPuzzleTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when (currentScreen) {
                         "home" -> HomeScreen(
+                            profile = playerProfile,
                             onStartGame = {
                                 currentPuzzle = gameManager.startNewGame(gameManager.getCurrentDNA() ?: PuzzleFactory.createDefaultDNA())
                                 currentScreen = "game"
@@ -81,22 +85,34 @@ class MainActivity : ComponentActivity() {
                         "settings" -> SettingsScreen(onBack = { currentScreen = "home" })
                         "game" -> GameScreen(
                             puzzle = currentPuzzle,
-                            onGameFinished = { path ->
+                            playerLevel = playerProfile.currentLevel,
+                            timeLimitSeconds = if (currentPuzzle.rules.contains("time_limit") || currentPuzzle.rules.contains("chaos")) 30 else 60,
+                            onGameFinished = { path, solveTime, mistakes ->
+                                lastMistakes = mistakes
+                                lastTimeText = "%02d:%02d".format((solveTime/1000)/60, (solveTime/1000)%60)
                                 soundManager.playSuccess()
                                 lifecycleScope.launch {
                                     gameManager.onGameFinished(
                                         puzzleId = currentPuzzle.id,
                                         moves = path.map { "${it.first},${it.second}" },
-                                        solveTime = 45000,
-                                        mistakes = 2
+                                        solveTime = solveTime,
+                                        mistakes = mistakes
                                     )
                                     currentScreen = "result"
                                 }
+                            },
+                            onGameOver = {
+                                soundManager.playFailure()
+                                currentScreen = "home"
+                            },
+                            onTrapHit = {
+                                soundManager.playFailure()
                             }
                         )
                         "result" -> ResultScreen(
-                            mistakes = 2,
-                            time = "00:45",
+                            mistakes = lastMistakes,
+                            time = lastTimeText,
+                            level = playerProfile.currentLevel,
                             onNext = {
                                 currentPuzzle = gameManager.startNewGame(gameManager.getCurrentDNA() ?: PuzzleFactory.createDefaultDNA())
                                 currentScreen = "game"
